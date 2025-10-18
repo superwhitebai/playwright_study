@@ -1,0 +1,14 @@
+# 环境配置
+env:
+  dev: "https://sso.dev.igancao.cn"  # 开发环境
+  test: "https://sso.test.igancao.cn" # 测试环境
+current_env: "dev"  # 当前使用的环境
+
+# 浏览器配置
+browser:
+  type: "chromium"  # 可选：chromium/firefox/webkit
+  headless: false   # 是否无头模式
+  slow_mo: 500      # 慢动作（毫秒，方便调试）
+
+# 登录状态文件路径
+storage_state: "./state.json"
