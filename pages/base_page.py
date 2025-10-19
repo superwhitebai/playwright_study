@@ -33,3 +33,24 @@ class BasePage:
     def get_text(self, locator: str):
         """获取元素文本"""
         return self.page.inner_text(locator)
+
+    def scroll_by_distance(self, x: int = 0, y: int = 500, delay: int = 500):
+        """
+        按指定距离滑动（x: 水平方向，y: 垂直方向，正数向下/右，负数向上/左）
+        :param x: 水平滑动距离（像素）
+        :param y: 垂直滑动距离（像素）
+        :param delay: 滑动动画时长（毫秒）
+        """
+        self.page.mouse.wheel(dx=x, dy=y)
+        # 等待滑动完成（可选）
+        self.page.wait_for_timeout(delay)
+
+    def scroll_to_bottom(self, delay: int = 500):
+        """滑动到页面底部"""
+        self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        self.page.wait_for_timeout(delay)
+
+    def scroll_to_top(self, delay: int = 500):
+        """滑动到页面顶部"""
+        self.page.evaluate("window.scrollTo(0, 0)")
+        self.page.wait_for_timeout(delay)
