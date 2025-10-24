@@ -7,8 +7,8 @@
 import pytest
 from playwright.sync_api import sync_playwright
 
-from playwright_study.pages.login_page import LoginPage
-from playwright_study.utils.yaml_utils import config
+from pages.login_page import LoginPage
+from utils.yaml_utils import config
 
 
 @pytest.fixture(scope="session")  # 会话级：所有用例共享一个浏览器

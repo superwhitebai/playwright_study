@@ -8,8 +8,8 @@
 import pytest
 import time
 import allure
-from playwright_study.utils.yaml_utils import YamlUtils, config
-from playwright_study.utils.path_utils import get_project_root
+from utils.yaml_utils import YamlUtils, config
+from utils.path_utils import get_project_root
 
 # 获取项目根目录
 project_root = get_project_root()

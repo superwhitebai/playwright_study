@@ -5,7 +5,7 @@
 # @file: base_page.py
 # @desc:
 from playwright.sync_api import Page
-from playwright_study.utils.yaml_utils import config
+from utils.yaml_utils import config
 
 
 class BasePage:
@@ -54,3 +54,9 @@ class BasePage:
         """滑动到页面顶部"""
         self.page.evaluate("window.scrollTo(0, 0)")
         self.page.wait_for_timeout(delay)
+
+    def refresh_page(self):
+        """刷新当前页面，等待网络空闲后再继续"""
+        self.page.reload(wait_until="networkidle")  # 调用 Playwright 自带的刷新方法
+        # 可选：加个小延迟，确保页面稳定（非必需）
+        self.page.wait_for_timeout(500)

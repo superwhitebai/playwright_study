@@ -5,7 +5,7 @@
 # @file: login_page.py.py
 # @desc:
 from playwright.sync_api import Page
-from playwright_study.pages.base_page import BasePage
+from pages.base_page import BasePage
 
 
 class LoginPage(BasePage):
