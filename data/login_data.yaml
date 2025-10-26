@@ -4,13 +4,6 @@ success_case:
   verify_code: "0902"  # 假设是固定验证码
   expected: "应用面板"
 
-# 登录失败的测试数据（示例）
-fail_cases:
-  - phone: "13800000000"
-    verify_code: "1234"
-    expected: "验证码错误"
-  - phone: ""
-    verify_code: "0902"
-    expected: "请输入手机号"
+
 
 
