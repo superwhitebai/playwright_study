@@ -5,8 +5,10 @@
 # @file: workorder_page.py.py
 # @desc:
 # pages/workorder_page.py
+from operator import index
+
 import allure
-from pages.base_page import BasePage
+from playwright_study.pages.base_page import BasePage
 
 class WorkorderPage(BasePage):
     # 工单系统按钮定位符（根据实际元素调整，此处为 class 定位）
@@ -18,10 +20,11 @@ class WorkorderPage(BasePage):
     create_workorder_btn = "text=创建工单"
     locator = 'div:has-text("技术") .menu-item span:has-text("0625二次")'
     confirm_but = "xpath=/html/body/div[2]/div/div[2]/div/div[2]/div[3]/button[2]"
-    _receiver_selector = 'div.ant-select.ant-select-show-search'
-    _receiver_input_xpath = 'xpath=/html/body/div[3]/div/div[2]/div/form/div[2]/div/div[2]/div/input'
-    _description_textarea_xpath = 'xpath=/html/body/div[3]/div/div[2]/div/form/div[3]/div/div/textarea'
-
+    _handler_input = (
+        'div:has(> div:has-text("不指定时会由小组成员自己认领")) '  # 包含提示文本的容器
+        'input.ant-select-selection-search-input'  # 容器内的输入框
+    )
+    _description_textarea = 'textarea[placeholder="请输入"][class="ant-input"]'
 
 
 
@@ -98,28 +101,35 @@ class WorkorderPage(BasePage):
             )
             self.new_page.locator(self.confirm_but).click()
 
-    def fill_workorder_details(self, receiver, description):
+    def fill_workorder_details(self, description):
         self._check_new_page()
-        with allure.step("填写接收人和说明内容（直接操作红框区域）"):
-            receiver_locator = self.new_page.locator(self._receiver_selector)
-            receiver_locator.wait_for(state="visible", timeout=15000)  # 等待红框区域可见
-            receiver_locator.click()  # 直接点击输入框激活（红框内可点击区域）
+        with allure.step("通过提示文本定位处理人输入框"):
+            # 步骤1：通过提示文本找到输入框并点击展开下拉框
+            input_locator = self.new_page.locator(self._handler_input)
+            input_locator.wait_for(state="visible", timeout=15000)
+            # 点击输入框激活（若无效则点击下拉箭头）
+            input_locator.click(force=True)
+            self.new_page.wait_for_timeout(800)
 
-            # 步骤1：点击并激活“接收人”输入框（红框区域）
-            receiver_locator = self.new_page.locator(self._receiver_input_xpath)
-            receiver_locator.wait_for(state="visible", timeout=15000)  # 等待红框区域可见
-            receiver_locator.click()  # 直接点击输入框激活（红框内可点击区域）
-            self.new_page.wait_for_timeout(500)  # 等待组件响应
+            for _ in range(2):
+                self.new_page.keyboard.press("ArrowDown")
+                self.new_page.wait_for_timeout(300)
+            self.new_page.keyboard.press("Enter")
 
-            # 步骤2：输入接收人（模拟键盘输入，确保组件识别）
-            receiver_locator.type(receiver, delay=100)  # 分字符输入，触发搜索
-            self.new_page.wait_for_timeout(500)  # 等待下拉选项加载（如有）
+            desc_locator = self.new_page.locator(self._description_textarea)
+            desc_locator.wait_for(state="visible", timeout=10000)
 
-            # 步骤3：点击并激活“说明内容”文本域（红框区域）
-            desc_locator = self.new_page.locator(self._description_textarea_xpath)
-            desc_locator.wait_for(state="visible", timeout=15000)
-            desc_locator.click()  # 点击激活文本域
-            desc_locator.type(description, delay=50)  # 输入内容
+            # 强制激活输入框（解决可能的聚焦问题）
+            desc_locator.click(force=True)
+            self.new_page.wait_for_timeout(300)  # 等待光标聚焦
+
+            # 清空并输入（避免默认值干扰）
+            desc_locator.clear()
+            desc_locator.type(description, delay=50)  # 放慢输入速度
+
+            # 验证输入结果（可选）
+            inputted_text = desc_locator.input_value()
+            assert inputted_text == description, f"输入内容不匹配，实际输入：{inputted_text}"
 
 
     def is_workorder_page(self):
