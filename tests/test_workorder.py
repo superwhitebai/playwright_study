@@ -8,7 +8,7 @@
 # tests/test_workorder.py
 import allure
 import pytest
-from pages.workorder_page import WorkorderPage
+from playwright_study.pages.workorder_page import WorkorderPage
 
 @allure.feature("工单系统模块")
 class TestWorkorder:
@@ -40,8 +40,7 @@ class TestWorkorder:
             workorder_page.click_confirm_but()
 
         with allure.step('点击接收人'):
-            workorder_page.fill_workorder_details(
-                receiver="地核桃",
+            workorder_page.fill_workorder_details(  # 只传description
                 description="这是测试说明内容"
             )
 
