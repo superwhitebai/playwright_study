@@ -8,26 +8,44 @@
 from operator import index
 
 import allure
-from playwright_study.pages.base_page import BasePage
+from playwright.sync_api import Page
+
+from pages.base_page import BasePage
 
 class WorkorderPage(BasePage):
-    # 工单系统按钮定位符（根据实际元素调整，此处为 class 定位）
-    _workorder_btn = "text=工单系统"  # 你的元素定位：class="ant-image-img"
-    # 可添加工单系统页面的其他元素（如页面标题，用于验证跳转成功）
-    _workorder_title = "text=工单系统"  # 假设跳转后有此标题
-    _workorde_my_work = "text=我的工作"
-    _my_initiated_btn_ = 'div[role="tab"]:has-text("我发起的")'
-    create_workorder_btn = "text=创建工单"
-    locator = 'div:has-text("技术") .menu-item span:has-text("0625二次")'
-    confirm_but = "xpath=/html/body/div[2]/div/div[2]/div/div[2]/div[3]/button[2]"
-    _handler_input = (
-        'div:has(> div:has-text("不指定时会由小组成员自己认领")) '  # 包含提示文本的容器
-        'input.ant-select-selection-search-input'  # 容器内的输入框
+    _confirm_button = 'xpath=/html/body/div[2]/div/div[2]/div/div[2]/div[3]/button[2]'
+
+    # 2. 技术分类下的“0625二次”：避免硬编码层级，用包含关系
+    _0625_secondary = (
+        'div:has-text("技术") '  # 包含“技术”文本的父容器
+        '.menu-item span:has-text("0625二次")'  # 子元素文本匹配
     )
-    _description_textarea = 'textarea[placeholder="请输入"][class="ant-input"]'
 
+    # 3. 说明内容输入框：模糊匹配placeholder（避免精确匹配失败）
+    _description_textarea = (
+        'textarea[class*="ant-input"]'  # class包含ant-input
+        '[placeholder*="请输入"]'  # placeholder包含“请输入”
+    )
 
+    _handler_select_container = 'div.ant-select:has(span.ant-select-selection-placeholder:has-text("不指定时会由小组成员自己认领"))'
+    _handler_input = f'{_handler_select_container} input.ant-select-selection-search-input'  # 依赖容器定位input
+    _handler_options = f'{_handler_select_container} .ant-select-dropdown li'  # 下拉选项
+    _handler_dropdown = "div.rc-select-dropdown:visible"
 
+    # 4. 其他定位符规范化（统一前缀下划线，明确含义）
+    _workorder_btn = "text=工单系统"  # 保持不变（文本定位稳定）
+    _workorder_title = "text=工单系统"
+    _my_work_btn = "text=我的工作"  # 原_workorde_my_work拼写错误，修正
+    _my_initiated_tab = 'div[role="tab"]:has-text("我发起的")'  # 明确是tab
+    _create_workorder_btn = "text=创建工单"  # 加下划线，符合私有属性规范
+    _second_confirm_btn = (
+        'div.ant-modal:has(text("处理人")) '  # 上下文：当前窗口显示处理人表单
+        'div.ant-modal-footer button.ant-btn-primary:has-text("确定")'
+    )
+
+    def __init__(self, page: Page):
+        super().__init__(page)
+        self.new_page = None
 
     def click_workorder_btn(self):
         """点击工单按钮，打开新页面并保存新页面对象"""
@@ -38,18 +56,18 @@ class WorkorderPage(BasePage):
 
     # 新增：点击新页面中的“我的工单”按钮
     def click_my_workorder_btn(self):
-        """在新页面中点击“我的工单”"""
-        if not hasattr(self, 'new_page'):
-            raise Exception("未找到新页面，请先调用 click_workorder_btn() 打开新页面")
-        self.new_page.click(self._workorde_my_work)  # 使用新页面对象操作
-        self.new_page.wait_for_selector("text=待我处理")  # 等待跳转完成
+        """点击“我的工作”按钮（修正版）"""
+        self._check_new_page()
+        with allure.step("点击新页面中的“我的工作”"):
+            # 等待“我的工作”按钮可见（确保页面加载完成）
+            my_work_locator = self.new_page.locator(self._my_work_btn)
+            my_work_locator.wait_for(state="visible", timeout=15000)
+            my_work_locator.click()
 
-        # 新增：封装刷新新页面两次的方法
 
     def refresh_new_page_twice(self):
+        self.new_page.wait_for_timeout(3000)
         self.new_page.reload(wait_until="networkidle")  # 刷新新页面
-        self.new_page.wait_for_timeout(2000)  # 等待刷新完成
-        # self.new_page.reload(wait_until="networkidle")  # 再次刷新新页面
 
     def _check_new_page(self):
         """检查新页面是否已打开且未关闭"""
@@ -59,26 +77,20 @@ class WorkorderPage(BasePage):
             raise Exception("新页面已关闭，无法执行操作")
 
     def click_my_initiated_btn(self):
-        """
-        点击"我发起的"按钮的方法
-        该方法会先检查是否已跳转到新页面，然后在新页面中定位并点击"我发起的"按钮。
-        使用了allure框架记录测试步骤，并设置了元素可见的超时等待时间。
-        """
-        # 检查是否已跳转到新页面
-        self._check_new_page()
-        with allure.step("点击新页面中的“我发起的”按钮"):
-            self.new_page.locator(self._my_initiated_btn_).wait_for(
-                state="visible",
-                timeout=10000
-            )
-            self.new_page.locator(self._my_initiated_btn_).click()
+        """点击“我发起的”标签（修正版）"""
+        self._check_new_page()  # 仅检查新页面有效
+        with allure.step("点击新页面中的“我发起的”"):
+            # 等待“我发起的”标签可见
+            initiated_locator = self.new_page.locator(self._my_initiated_tab)
+            initiated_locator.wait_for(state="visible", timeout=15000)
+            initiated_locator.click()
 
     def click_create_workorder_btn(self):
         """点击新页面中的“创建工单”按钮"""
         self._check_new_page()  # 确保新页面已打开
         with allure.step("点击新页面中的“创建工单”按钮"):
             # 关键：使用self.new_page定位，且调用locator方法
-            self.new_page.locator(self.create_workorder_btn).click()
+            self.new_page.locator(self._create_workorder_btn).click()
 
     def click_0625_secondary(self):
         """点击技术分类下的“0625二次”（修正版）"""
@@ -86,20 +98,37 @@ class WorkorderPage(BasePage):
         with allure.step("点击技术分类下的“0625二次”"):
             # 优化定位器：用后代选择器（空格），放宽层级限制
             # 先等待元素可见（超时10秒，应对加载延迟）
-            locator = self.locator
+            locator = self._0625_secondary
             self.new_page.locator(locator).wait_for(state="visible", timeout=10000)
             # 在新页面中点击（关键：用self.new_page）
             self.new_page.locator(locator).click()
 
-    def click_confirm_but(self):
-        self._check_new_page()  # 确保在新页面操作
-        with allure.step("点击弹窗中的“确定”按钮（XPath定位）"):
-            # 直接使用带 "xpath=" 前缀的定位符
-            self.new_page.locator(self.confirm_but).wait_for(
-                state="visible",
-                timeout=15000  # 超时15秒
-            )
-            self.new_page.locator(self.confirm_but).click()
+
+    def click_confirm_button(self):
+        """点击第一个“确定”按钮（选择协同问题后），等待窗口显示“处理人”表单"""
+        self._check_new_page()
+        with allure.step("点击第一个确定按钮，等待窗口内容更新为处理人表单"):
+            # 1. 点击第一个确定按钮（复用你的绝对XPath）
+            confirm_locator = self.new_page.locator(self._confirm_button)
+            confirm_locator.wait_for(state="visible", timeout=15000)  # 确保按钮存在
+            confirm_locator.click(force=True)
+
+            # 2. 关键：不等待按钮隐藏，而是等待窗口出现“处理人”字段（确认内容更新）
+            try:
+                self.new_page.wait_for_selector(
+                    "text=处理人",  # 窗口内容更新的标志（必须是实际出现的文本）
+                    state="visible",
+                    timeout=15000
+                )
+            except TimeoutError:
+                allure.attach(
+                    self.new_page.screenshot(full_page=True),
+                    name="点击确定后未显示处理人表单",
+                    attachment_type=allure.attachment_type.PNG
+                )
+                raise Exception("点击第一个确定后，窗口未切换到处理人表单（未找到“处理人”文本）")
+
+
 
     def fill_workorder_details(self, description):
         self._check_new_page()
