@@ -1,0 +1,31 @@
+version: 1
+
+formatters:
+  simple:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: simple
+    stream: ext://sys.stdout
+
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: simple
+    filename: logs/ui.log      # 日志文件，相对项目根目录
+    maxBytes: 1048576          # 1MB 自动切分
+    backupCount: 3             # 最多保留 3 个历史文件
+    encoding: utf-8
+
+loggers:
+  ui:                          # 你项目里常用的 logger 名字
+    level: INFO
+    handlers: [console, file]
+    propagate: no
+
+root:
+  level: WARNING
+  handlers: [console]
