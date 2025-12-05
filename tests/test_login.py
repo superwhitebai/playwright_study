@@ -4,6 +4,13 @@
 # @Author  : 地核桃
 # @file: test_login.py.py
 # @desc:
+import sys
+import os
+
+# 获取项目根目录（当前文件在tests目录下，需回退一级）
+root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(root_path)
+
 
 import pytest
 import time
@@ -18,7 +25,6 @@ project_root = get_project_root()
 login_data_path = project_root / "data" / "login_data.yaml"
 # 读取测试数据
 login_data = YamlUtils.read_yaml(login_data_path)
-
 logger = get_logger("ui")
 
 @allure.feature("登录模块")

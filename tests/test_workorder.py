@@ -7,6 +7,7 @@
 
 
 import allure
+from playwright.sync_api import expect
 from pages.workorder_page import WorkorderPage
 from utils.logger_utils import get_logger   # ✅ 1. 引入日志工具
 
@@ -67,6 +68,40 @@ class TestWorkorder:
         with allure.step("点击第二个页面【确认】按钮"):
             workorder_page.click_confirm_button()
             logger.info("已点击第二步确认按钮，工单提交流程结束")
+
+            # workorder_page.page.pause()
+
+        with allure.step("验证Toast提示"):
+            logger.info("开始验证Toast提示：创建者不可以工单派给自己")
+
+            # 1. 检查新页面状态
+            if not workorder_page.new_page or workorder_page.new_page.is_closed():
+                allure.attach(
+                    workorder_page.page.screenshot(full_page=True),
+                    name="新工单页面已关闭",
+                    attachment_type=allure.attachment_type.PNG
+                )
+                raise Exception("新工单页面已关闭，无法验证Toast")
+
+            # 2. 用新页面定位Toast（核心修正）
+            toast_locator = workorder_page.new_page.get_by_text(
+                "创建者不可以工单派给自己",
+                exact=True  # 完全匹配文本
+            )
+
+            # 3. 修正断言：移除message参数，用try-except自定义错误
+            try:
+                # 等待10秒，直到Toast可见（自动重试）
+                expect(toast_locator).to_be_visible(timeout=10000)
+            except Exception as e:
+                # 断言失败时，添加新页面截图到Allure报告
+                allure.attach(
+                    workorder_page.new_page.screenshot(full_page=True),
+                    name="Toast断言失败-页面截图",
+                    attachment_type=allure.attachment_type.PNG
+                )
+                # 抛出自定义错误信息
+                raise Exception("未找到预期的Toast提示：创建者不可以工单派给自己") from e
 
         logger.info("========【工单用例】登录后进入工单系统 执行结束 ========")
 
