@@ -1,9 +1,28 @@
-# 登录成功的测试数据
-success_case:
-  phone: "13221010902"
-  verify_code: "0902"  # 假设是固定验证码
-  expected: "应用面板"
+
+# data/login_data.yaml
+#success_case:
+#  phone: "13515818193"
+#  verify_code: "8193"
+#  expected: "应用面板"
+#
+# 文件：data/login_data.yaml
+#- case_id: LOGIN_001
+#  title: 正确手机号验证码登录成功
+#  priority: P0
+#  data:
+#    phone: "13221010902"
+#    verify_code: "0902"
+#  asserts:
+#    expect_text: "应用面板"
 
 
 
 
+- case_id: LOGIN_001
+  title: 正确手机号验证码登录成功
+  priority: P0
+  data:
+    phone: "15258832127"
+    verify_code: "2127"
+  asserts:
+    expect_text: "应用面板"

@@ -5,30 +5,57 @@
 # @file: conftest.py.py
 # @desc:
 
-
-import pytest
-
-
-import sys
+import sys, os
 from pathlib import Path
 
-# 获取 conftest.py 所在的目录（即 playwrigh_study 目录）
-current_dir = Path(__file__).resolve().parent  # 绝对路径，如 D:\GC_test\playwright_study
-print(f"当前 conftest.py 所在目录：{current_dir}")  # 打印确认
+# 确保项目根路径加入 sys.path
+current_dir = Path(__file__).resolve().parent
+project_root = current_dir  # 当前已是项目根目录（D:\GC_test\playwright_study）
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
-# 将项目根目录（playwright_study）添加到 Python 搜索路径
-sys.path.append(str(current_dir))
-print(f"添加到 sys.path 的路径：{current_dir}")  # 打印确认
-print(f"当前 sys.path 列表：{sys.path}")  # 查看是否包含目标路径
+# 文件：conftest.py
+import pytest
+from playwright.sync_api import sync_playwright
+from utils.yaml_utils import config, project_root
+from pages.login_page import LoginPage
+from utils.logger_utils import get_logger
+logger = get_logger("ui")
 
-# 之后再导入 utils
-from utils.yaml_utils import config  # 第12行的导入语句
+@pytest.fixture(scope="session")
+def browser():
+    """根据 config.yaml 启动指定浏览器"""
+    browser_cfg = config.get("browser", {})
+    browser_type = browser_cfg.get("type", "chromium")
+    headless = browser_cfg.get("headless", False)
+    slow_mo = browser_cfg.get("slow_mo", 0)
 
+    with sync_playwright() as p:
+        browser = getattr(p, browser_type).launch(headless=headless, slow_mo=slow_mo)
+        logger.info(f"启动浏览器：{browser_type}, headless={headless}, slow_mo={slow_mo}")
+        yield browser
+        browser.close()
 
-# conftest.py 中已有的 context 夹具（确保正确加载状态）
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def context(browser):
-    # 加载保存的登录状态
-    context = browser.new_context(storage_state=config["storage_state"])
-    yield context
-    context.close()
+    """根据 storage_state 启动上下文"""
+    storage_path = project_root / config["storage_state"]
+    if storage_path.exists():
+        ctx = browser.new_context(storage_state=str(storage_path))
+        logger.info(f"使用登录态文件：{storage_path}")
+    else:
+        ctx = browser.new_context()
+    yield ctx
+    ctx.close()
+
+@pytest.fixture(scope="function")
+def page(context):
+    """每个用例一个新 Page"""
+    p = context.new_page()
+    yield p
+    p.close()
+
+@pytest.fixture(scope="function")
+def login_page(page):
+    """登录页面对象"""
+    return LoginPage(page)

@@ -1,147 +1,154 @@
+# 文件：pages/workorder_page.py
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time:2025/10/19 00:38
-# @Author  : 地核桃
-# @file: workorder_page.py.py
-# @desc:根据登录态-创建工单
+# @Time:2025/12/12
+# @Author  : 地核桃（优化融合 by ai_Playwright助手）
+# @Desc: 根据登录态创建工单
 
 import allure
-from playwright.sync_api import Page
-
+import re
+from typing import Optional
+from playwright.sync_api import Page, expect
 from pages.base_page import BasePage
+from utils.logger_utils import logger
+
 
 class WorkorderPage(BasePage):
-
-
-
-    _confirm_button = 'xpath=/html/body/div[2]/div/div[2]/div/div[2]/div[3]/button[2]'
-    _0625_secondary = (
-        'div:has-text("技术") '  
-        '.menu-item span:has-text("0625二次")'
-    )
-    _description_textarea = (
-        'textarea[class*="ant-input"]'  
-        '[placeholder*="请输入"]'
-    )
-    _handler_select_container = 'div.ant-select:has(span.ant-select-selection-placeholder:has-text("不指定时会由小组成员自己认领"))'
-    _handler_input = f'{_handler_select_container} input.ant-select-selection-search-input'
-    _handler_options = f'{_handler_select_container} .ant-select-dropdown li'  # 下拉选项
-    _handler_dropdown = "div.rc-select-dropdown:visible"
-    _workorder_btn = "text=工单系统"  # 保持不变（文本定位稳定）
-    _workorder_title = "text=工单系统"
-    _my_work_btn = "text=我的工作"
-    _my_initiated_tab = 'div[role="tab"]:has-text("我发起的")'
-    _create_workorder_btn = "text=创建工单"
-    _second_confirm_btn = (
-        'div.ant-modal:has(text("处理人")) ' 
-        'div.ant-modal-footer button.ant-btn-primary:has-text("确定")'
-    )
-
+    """工单系统页面操作封装"""
 
     def __init__(self, page: Page):
         super().__init__(page)
-        self.new_page = None
+        self.new_page: Optional[Page] = None
 
-    def click_workorder_btn(self):
-        """点击工单按钮，打开新页面并保存新页面对象"""
-        with self.page.expect_popup() as popup_info:
-            self.click(self._workorder_btn)
-        self.new_page = popup_info.value
-        self.new_page.wait_for_load_state("networkidle")
-
-    # 新增：点击新页面中的“我的工单”按钮
-    def click_my_workorder_btn(self):
-        """点击“我的工作”按钮"""
-        self._check_new_page()
-        with allure.step("点击新页面中的“我的工作”"):
-            my_work_locator = self.new_page.locator(self._my_work_btn)
-            my_work_locator.wait_for(state="visible", timeout=15000)
-            my_work_locator.click()
-
-
-    def refresh_new_page_twice(self):
-        self.new_page.wait_for_timeout(3000)
-        self.new_page.reload(wait_until="networkidle")  #(刷新页面)
+    # ========= 通用内部方法 =========
 
     def _check_new_page(self):
-        """检查新页面是否已打开且未关闭"""
-        if not self.new_page:  # 新页面未初始化（未打开）
-            raise Exception("新页面未打开，请先调用 click_workorder_btn() 打开新页面")
-        if self.new_page.is_closed():  # 新页面已被关闭
-            raise Exception("新页面已关闭，无法执行操作")
+        """校验工单新窗口是否已打开"""
+        if self.new_page is None:
+            logger.error("工单新页面未打开，请先执行 click_workorder_btn()")
+            raise Exception("工单新页面未打开")
+        if self.new_page.is_closed():
+            logger.error("工单新页面已关闭，无法继续操作")
+            raise Exception("工单新页面已关闭")
 
+    # ========= 顶层入口 =========
+
+    @allure.step("点击应用面板中的【工单系统】按钮，打开工单新页面")
+    def click_workorder_btn(self):
+        with self.page.expect_popup() as popup_info:
+            self.page.get_by_text("工单系统", exact=True).click()
+        self.new_page = popup_info.value
+        self.new_page.wait_for_load_state("networkidle")
+        logger.info(f"✅ 工单系统新页面已打开，URL={self.new_page.url}")
+
+    # ========= 页面加载校验 =========
+
+    @allure.step("等待工单首页加载完成（直到【我的工作】可见）")
+    def wait_for_workorder_home_ready(self, timeout: int = 30000):
+        self._check_new_page()
+        self.new_page.wait_for_load_state("networkidle")
+        expect(self.new_page.get_by_text("我的工作")).to_be_visible(timeout=timeout)
+        logger.info("✅ 工单首页加载完成")
+
+    @allure.step("点击左侧【我的工作】菜单")
+    def click_my_workorder_btn(self):
+        self._check_new_page()
+        self.wait_for_workorder_home_ready()
+        my_work = self.new_page.get_by_text("我的工作")
+        expect(my_work).to_be_visible(timeout=15000)
+        my_work.click()
+        logger.info("✅ 已点击【我的工作】")
+
+    @allure.step("点击顶部【我发起的】Tab")
     def click_my_initiated_btn(self):
-        """点击“我发起的”标签"""
         self._check_new_page()
-        with allure.step("点击新页面中的“我发起的”"):
-            # 等待“我发起的”标签
-            initiated_locator = self.new_page.locator(self._my_initiated_tab)
-            initiated_locator.wait_for(state="visible", timeout=15000)
-            initiated_locator.click()
+        tab = self.new_page.get_by_text("我发起")
+        expect(tab).to_be_visible(timeout=15000)
+        tab.click()
+        logger.info("✅ 已切换到【我发起的】Tab")
 
+    # ========= 创建工单 =========
+
+    @allure.step("点击【创建工单】按钮")
     def click_create_workorder_btn(self):
-        """点击新页面中的“创建工单”按钮"""
-        self._check_new_page()  # 确保新页面已打开
-        with allure.step("点击新页面中的“创建工单”按钮"):
-            # 关键：使用self.new_page定位，且调用locator方法
-            self.new_page.locator(self._create_workorder_btn).click()
+        self._check_new_page()
+        self.new_page.wait_for_load_state("networkidle")
 
+        btn = self.new_page.get_by_role("button", name=re.compile("创建工单"))
+        try:
+            expect(btn).to_be_visible(timeout=10000)
+            btn.click()
+            logger.info("✅ 点击【创建工单】按钮成功")
+        except Exception:
+            logger.warning("通过 role=button 未找到【创建工单】，退回 get_by_text 匹配")
+            fallback = self.new_page.get_by_text("创建工单")
+            expect(fallback).to_be_visible(timeout=10000)
+            fallback.click()
+
+    @allure.step("选择问题类型【技术 -> 0625二次】")
     def click_0625_secondary(self):
-        """点击技术分类下的“0625二次”"""
         self._check_new_page()
-        with allure.step("点击技术分类下的“0625二次”"):
-            locator = self._0625_secondary
-            self.new_page.locator(locator).wait_for(state="visible", timeout=10000)
-            self.new_page.locator(locator).click()
+        locator = self.new_page.locator(
+            'div:has-text("技术") .menu-item span:has-text("0625二次")'
+        )
+        locator.wait_for(state="visible", timeout=10000)
+        locator.click()
+        logger.info("✅ 已选择问题类型：技术 -> 0625二次")
 
-
-    def click_confirm_button(self):
+    @allure.step("点击第二个【确 定】按钮")
+    def click_second_confirm_btn(self):
         self._check_new_page()
-        with allure.step("点击第一个确定按钮，等待窗口内容更新为处理人表单"):
-            # 绝对XPath）
-            confirm_locator = self.new_page.locator(self._confirm_button)
-            confirm_locator.wait_for(state="visible", timeout=15000)  # 确保按钮存在
-            confirm_locator.click(force=True)
-            try:
-                self.new_page.wait_for_selector(
-                    "text=处理人",
-                    state="visible",
-                    timeout=15000
+        btn = self.new_page.get_by_role("button", name="确 定")
+        expect(btn).to_be_visible(timeout=10000)
+        btn.click()
+        logger.info("✅ 点击第二个确定按钮成功")
+
+    # ========= 填写工单详情 =========
+
+    @allure.step("填写处理人和工单说明")  # 使用allure.step装饰器标记测试步骤，步骤名称为"填写处理人和工单说明"
+    @allure.step("填写工单详情：处理人 + 说明")
+    def fill_workorder_details(self, description: str):
+        self._check_new_page()
+
+        try:
+            with allure.step("选择工单处理人"):
+                handler = self.new_page.locator(
+                    'div.ant-select:has(span.ant-select-selection-placeholder:has-text("不指定时会由小组成员自己认领"))'
                 )
-            except TimeoutError:
-                allure.attach(
-                    self.new_page.screenshot(full_page=True),
-                    name="点击确定后未显示处理人表单",
-                    attachment_type=allure.attachment_type.PNG
+                handler.wait_for(state="visible", timeout=15000)
+                handler.click(force=True)
+                logger.info("✅ 已点击处理人下拉框")
+
+                # 循环按键选择成员
+                for i in range(2):
+                    self.new_page.keyboard.press("ArrowDown")
+                    logger.info(f"⬇️ 第 {i+1} 次按下方向键 ↓")
+                    self.new_page.wait_for_timeout(300)
+
+                self.new_page.keyboard.press("Enter")
+                logger.info("✅ 已按下 Enter 键确认选择处理人")
+
+            with allure.step("填写工单说明内容"):
+                desc = self.new_page.locator(
+                    'textarea[class*="ant-input"][placeholder*="请输入"]'
                 )
-                raise Exception("点击第一个确定后，窗口未切换到处理人表单（未找到“处理人”文本）")
+                desc.wait_for(state="visible", timeout=10000)
+                desc.fill("")
+                desc.type(description, delay=50)
+                expect(desc).to_have_value(description)
+                logger.info(f"✅ 已填写工单说明：{description}")
 
-    def fill_workorder_details(self, description):
-        self._check_new_page()
-        with allure.step("通过提示文本定位处理人输入框"):
-            input_locator = self.new_page.locator(self._handler_input)
-            input_locator.wait_for(state="visible", timeout=15000)
-            input_locator.click(force=True)
-            self.new_page.wait_for_timeout(800)
+            allure.attach(
+                self.new_page.screenshot(full_page=False),
+                name="工单详情填写完成",
+                attachment_type=allure.attachment_type.PNG,
+            )
 
-            for _ in range(2):
-                self.new_page.keyboard.press("ArrowDown")
-                self.new_page.wait_for_timeout(300)
-            self.new_page.keyboard.press("Enter")
-
-            desc_locator = self.new_page.locator(self._description_textarea)
-            desc_locator.wait_for(state="visible", timeout=10000)
-
-            desc_locator.click(force=True)
-            self.new_page.wait_for_timeout(300)  # 等待光标聚焦
-
-            desc_locator.clear()
-            desc_locator.type(description, delay=50)  # 放慢输入速度
-
-            inputted_text = desc_locator.input_value()
-            assert inputted_text == description, f"输入内容不匹配，实际输入：{inputted_text}"
-
-
-    def is_workorder_page(self):
-        """验证是否进入工单系统页面"""
-        return self.get_text(self._workorder_title) == "工单系统"
+        except Exception as e:
+            allure.attach(
+                self.new_page.screenshot(full_page=True),
+                name="工单详情填写失败截图",
+                attachment_type=allure.attachment_type.PNG,
+            )
+            logger.error(f"❌ 填写工单详情失败：{e}")
+            raise

@@ -3,31 +3,37 @@
 # @Time:2025/11/13 18:36
 # @Author  : 地核桃
 # @file: logger_utils.py.py
-# @desc:
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# @Time: 2025/12/12
+# @Author: 地核桃 + ai_Playwright助手
+# @Desc: 项目通用日志封装
 
-import os
 import logging
 import logging.config
 import yaml
+from pathlib import Path
 
-ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
-LOG_CONFIG_PATH = os.path.join(ROOT_DIR, "config", "log.yaml")
+# ========== 自动加载 log.yaml 配置 ==========
+project_root = Path(__file__).resolve().parents[1]
+log_config_path = project_root / "config" / "log.yaml"
 
-LOG_DIR = os.path.join(ROOT_DIR, "logs")
-os.makedirs(LOG_DIR, exist_ok=True)
+if log_config_path.exists():
+    with open(log_config_path, "r", encoding="utf-8") as f:
+        config_data = yaml.safe_load(f)
+    logging.config.dictConfig(config_data)
+else:
+    # 没找到配置文件则使用默认配置
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    print(f"[logger_utils] ⚠️ 未找到日志配置文件：{log_config_path}")
 
-def get_logger(name: str = "ui") -> logging.Logger:
-    """
-    返回一个按 log.yaml 配置好的 logger
-    """
-    with open(LOG_CONFIG_PATH, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
-
-    # 如果 handler 里有相对路径 filename，自动加上 ROOT_DIR
-    for handler in config.get("handlers", {}).values():
-        filename = handler.get("filename")
-        if filename and not os.path.isabs(filename):
-            handler["filename"] = os.path.join(ROOT_DIR, filename)
-
-    logging.config.dictConfig(config)
+# ========== 提供两种调用方式 ==========
+def get_logger(name: str = "ui"):
+    """返回指定名称的 logger 对象"""
     return logging.getLogger(name)
+
+# ✅ 全局默认 logger（用于 from utils.logger_utils import logger）
+logger = get_logger("ui")
