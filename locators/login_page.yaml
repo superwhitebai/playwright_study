@@ -1,0 +1,26 @@
+scan_login_btn:
+  by: css
+  value: "img#scanLogin.code-tips.pointer"
+
+phone_input:
+  by: css
+  value: "#phoneInput"
+
+code_input:
+  by: css
+  value: "#codeInput"
+
+send_code_btn:
+  by: css
+  value: "#sendCodeBtn"
+
+login_btn:
+  by: css
+  value: "#phoneLoginBtn"
+
+#断言内容
+app_panel_text:
+  by: css
+  value: "div.ant-card-head-title"
+
+

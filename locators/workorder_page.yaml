@@ -1,0 +1,55 @@
+# locators/workorder_page.yaml
+
+workorder_btn:
+  by: text
+  value: "工单系统"
+
+workorder_title:
+  by: text
+  value: "工单系统"
+
+my_work_btn:
+  by: text
+  value: "我的工作"
+
+my_initiated_tab:
+  by: css
+  value: 'div[role="tab"]:has-text("我发起的")'
+
+create_workorder_btn:
+  by: text
+  value: "创建工单"
+
+confirm_button:
+  by: xpath
+  value: '/html/body/div[2]/div/div[2]/div/div[2]/div[3]/button[2]'
+
+secondary_0625:
+  by: css
+  value: 'div:has-text("技术") .menu-item span:has-text("0625二次")'
+
+description_textarea:
+  by: css
+  value: 'textarea[class*="ant-input"][placeholder*="请输入"]'
+
+handler_select_container:
+  by: css
+  value: 'div.ant-select:has(span.ant-select-selection-placeholder:has-text("不指定时会由小组成员自己认领"))'
+
+handler_input:
+  by: css
+  value: 'div.ant-select:has(span.ant-select-selection-placeholder:has-text("不指定时会由小组成员自己认领")) input.ant-select-selection-search-input'
+
+handler_options:
+  by: css
+  value: 'div.ant-select:has(span.ant-select-selection-placeholder:has-text("不指定时会由小组成员自己认领")) .ant-select-dropdown li'
+
+handler_dropdown:
+  by: css
+  value: "div.rc-select-dropdown:visible"
+
+second_confirm_btn:
+  by: role
+  role: "button"
+  name: "确 定"
+

@@ -57,6 +57,5 @@ class BasePage:
 
     def refresh_page(self):
         """刷新当前页面，等待网络空闲后再继续"""
-        self.page.reload(wait_until="networkidle")  # 调用 Playwright 自带的刷新方法
-        # 可选：加个小延迟，确保页面稳定（非必需）
+        self.page.reload(wait_until="networkidle")
         self.page.wait_for_timeout(500)
